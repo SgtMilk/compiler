@@ -1,6 +1,8 @@
 use crate::token::Token;
 
-pub trait Node {
+use std::any::Any;
+
+pub trait Node: Any {
     fn token_litteral(&self) -> String;
 }
 
@@ -12,8 +14,8 @@ pub trait Expression: Node {}
 
 // ======================================================
 // Root Program Node
-struct Program {
-    statements: Vec<Box<dyn Statement>>,
+pub struct Program {
+    pub statements: Vec<Box<dyn Statement>>,
 }
 
 impl Node for Program {
@@ -28,24 +30,24 @@ impl Node for Program {
 
 // ======================================================
 // Let Statement Node
-struct LetStatement<'a> {
-    token: Token,
-    name: &'a Identifier,
-    value: Box<dyn Expression>,
+pub struct LetStatement {
+    pub token: Token,
+    pub identifier: Identifier,
+    pub value: Box<dyn Expression>,
 }
 
-impl<'a> Node for LetStatement<'a> {
+impl Node for LetStatement {
     fn token_litteral(&self) -> String {
         return "let".to_string();
     }
 }
-impl<'a> Statement for LetStatement<'a> {}
+impl Statement for LetStatement {}
 
 // ======================================================
 // Identifier Node
-struct Identifier {
-    token: Token,
-    value: String,
+pub struct Identifier {
+    pub token: Token,
+    pub value: String,
 }
 
 impl Node for Identifier {

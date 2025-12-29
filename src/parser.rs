@@ -1,3 +1,4 @@
+use crate::ast::*;
 use crate::lexer::Lexer;
 use crate::token::Token;
 
@@ -6,6 +7,8 @@ struct Parser<'a> {
 
     cur_token: Token,
     peek_token: Token,
+
+    errors: Vec<String>,
 }
 
 impl<'a> Parser<'a> {
@@ -14,6 +17,7 @@ impl<'a> Parser<'a> {
             lexer,
             cur_token: Token::Illegal,
             peek_token: Token::Illegal,
+            errors: Vec::new(),
         };
 
         parser.next_token();
@@ -22,8 +26,184 @@ impl<'a> Parser<'a> {
         return parser;
     }
 
+    fn parse_program(&mut self) -> Program {
+        let mut program = Program {
+            statements: Vec::new(),
+        };
+
+        while self.cur_token != Token::Eof {
+            let poss_statement = self.parse_statement();
+
+            if let Some(statement) = poss_statement {
+                program.statements.push(statement);
+            }
+
+            self.next_token();
+        }
+
+        return program;
+    }
+
+    fn parse_statement(&mut self) -> Option<Box<dyn Statement>> {
+        match self.cur_token {
+            Token::Let => {
+                let let_statement = self.parse_let_statement()?;
+                return Some(Box::new(let_statement) as Box<dyn Statement>);
+            }
+            _ => return None,
+        }
+    }
+
+    fn parse_let_statement(&mut self) -> Option<LetStatement> {
+        let let_token = self.cur_token.clone();
+
+        if !self.expect_peek(Token::Ident(String::new())) {
+            return None;
+        }
+
+        let identifier = match &self.cur_token {
+            Token::Ident(ident_name) => Identifier {
+                token: self.cur_token.clone(),
+                value: ident_name.to_string(),
+            },
+            _ => return None,
+        };
+
+        if !self.expect_peek(Token::Assign) {
+            return None;
+        }
+
+        // TODO: we need to parse the value of the statement
+        while !self.cur_token_is(&Token::Semicolon) {
+            self.next_token();
+        }
+
+        let temp_value = Identifier {
+            token: Token::Int("5".to_string()),
+            value: "5".to_string(),
+        };
+
+        return Some(LetStatement {
+            token: let_token,
+            identifier,
+            value: Box::new(temp_value),
+        });
+    }
+
+    fn cur_token_is(&self, expected_tok: &Token) -> bool {
+        return std::mem::discriminant(&self.cur_token) == std::mem::discriminant(expected_tok);
+    }
+
+    fn peek_token_is(&self, expected_tok: &Token) -> bool {
+        return std::mem::discriminant(&self.peek_token) == std::mem::discriminant(expected_tok);
+    }
+
+    fn expect_peek(&mut self, expected_tok: Token) -> bool {
+        if self.peek_token_is(&expected_tok) {
+            self.next_token();
+            return true;
+        } else {
+            self.peek_error(expected_tok);
+            return false;
+        }
+    }
+
     fn next_token(&mut self) {
         // peek_token goes into cur_token and peek_token gets a new value
         self.cur_token = std::mem::replace(&mut self.peek_token, self.lexer.next_token());
+    }
+
+    fn get_errors(&self) -> &Vec<String> {
+        return &self.errors;
+    }
+
+    fn peek_error(&mut self, expected_tok: Token) {
+        if self.peek_token_is(&expected_tok) {
+            return;
+        }
+
+        let msg = format!(
+            "Expected next token to be {}, got {} instead",
+            &expected_tok.to_string(),
+            self.peek_token
+        );
+        self.errors.push(msg);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::ast::{LetStatement, Node};
+
+    use super::{Lexer, Parser, Statement};
+    use std::any::Any;
+
+    #[test]
+    fn test_let_statements() {
+        let test_str = "
+let x = 5;
+let y = 10;
+let foobar = 838383;
+";
+
+        let mut lexer = Lexer::new(test_str);
+        let mut parser = Parser::new(&mut lexer);
+
+        let program = parser.parse_program();
+        check_parser_errors(&parser);
+
+        let num_statements = program.statements.len();
+        assert_eq!(
+            num_statements, 3,
+            "Number of statements is wrong (expected: 3, actual: {})",
+            num_statements
+        );
+
+        let expected_statements = ["x", "y", "foobar"];
+        for (i, expected_statement) in expected_statements.iter().enumerate() {
+            test_let_statement(expected_statement.to_string(), &program.statements[i]);
+        }
+    }
+
+    // ===========================================
+    // HELPERS
+    fn test_let_statement(expected: String, actual: &Box<dyn Statement>) {
+        assert_eq!(actual.token_litteral(), "let".to_string());
+
+        let let_statement =
+            if let Some(let_s) = (&**actual as &dyn Any).downcast_ref::<LetStatement>() {
+                let_s
+            } else {
+                panic!("Could not extract LetStatement from Statement.")
+            };
+
+        assert_eq!(
+            let_statement.identifier.value, expected,
+            "Value of identifier is wrong (expected: {}, actual: {})",
+            let_statement.identifier.value, expected
+        );
+
+        assert_eq!(
+            let_statement.identifier.token_litteral(),
+            expected,
+            "Value returned from token_litteral is wrong (expected: {}, actual: {})",
+            let_statement.identifier.token_litteral(),
+            expected
+        );
+    }
+
+    fn check_parser_errors(parser: &Parser) {
+        let errors = parser.get_errors();
+        if errors.len() == 0 {
+            return;
+        }
+
+        let mut msg = format!("Parser had {} errors:", errors.len());
+        for err in errors {
+            msg.push_str("\n");
+            msg.push_str(err);
+        }
+
+        panic!("{}", msg);
     }
 }

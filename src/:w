@@ -50,10 +50,6 @@ impl<'a> Parser<'a> {
                 let let_statement = self.parse_let_statement()?;
                 return Some(Box::new(let_statement) as Box<dyn Statement>);
             }
-            Token::Return => {
-                let return_statement = self.parse_return_statement()?;
-                return Some(Box::new(return_statement) as Box<dyn Statement>);
-            }
             _ => return None,
         }
     }
@@ -99,7 +95,6 @@ impl<'a> Parser<'a> {
 
         self.next_token();
 
-        // TODO: we need to parse the value of the statement
         while self.cur_token != Token::Semicolon {
             self.next_token();
         }

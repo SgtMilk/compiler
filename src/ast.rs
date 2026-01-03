@@ -44,6 +44,21 @@ impl Node for LetStatement {
 impl Statement for LetStatement {}
 
 // ======================================================
+// Return Statement Node
+pub struct ReturnStatement {
+    pub token: Token,
+    pub return_value: Box<dyn Expression>,
+}
+
+impl Node for ReturnStatement {
+    fn token_litteral(&self) -> String {
+        return "return".to_string();
+    }
+}
+
+impl Statement for ReturnStatement {}
+
+// ======================================================
 // Identifier Node
 pub struct Identifier {
     pub token: Token,

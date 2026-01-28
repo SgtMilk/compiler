@@ -1,12 +1,19 @@
 use crate::ast::*;
 use crate::lexer::Lexer;
 use crate::token::Token;
+use std::collections::HashMap;
+
+type PrefixParseFn = fn() -> Box<dyn Expression>;
+type InfixParseFn = fn(Box<dyn Expression>) -> Box<dyn Expression>;
 
 struct Parser<'a> {
     lexer: &'a mut Lexer,
 
     cur_token: Token,
     peek_token: Token,
+
+    prefix_parse_fns: HashMap<Token, &'a PrefixParseFn>,
+    infix_parse_fns: HashMap<Token, &'a InfixParseFn>,
 
     errors: Vec<String>,
 }
@@ -18,6 +25,8 @@ impl<'a> Parser<'a> {
             cur_token: Token::Illegal,
             peek_token: Token::Illegal,
             errors: Vec::new(),
+            prefix_parse_fns: HashMap::new(),
+            infix_parse_fns: HashMap::new(),
         };
 
         parser.next_token();
@@ -153,6 +162,16 @@ impl<'a> Parser<'a> {
             self.peek_token
         );
         self.errors.push(msg);
+    }
+
+    // Pratt Parser helpers
+
+    fn register_prefix(&mut self, token: Token, prefix_parse_fn: &'a PrefixParseFn) {
+        self.prefix_parse_fns.insert(token, prefix_parse_fn);
+    }
+
+    fn register_infix(&mut self, token: Token, infix_parse_fn: &'a InfixParseFn) {
+        self.infix_parse_fns.insert(token, infix_parse_fn);
     }
 }
 

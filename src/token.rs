@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone, Hash)]
 pub enum Token {
     Illegal,
     Eof,
@@ -73,5 +73,41 @@ impl Display for Token {
             Token::Else => write!(f, "Else"),
             Token::Return => write!(f, "Return"),
         };
+    }
+}
+
+impl Token {
+    pub fn litteral(&self) -> String {
+        let val = match self {
+            Token::Illegal => "ILLEGAL",
+            Token::Eof => "",
+            Token::Ident(identifier) => &identifier,
+            Token::Int(int_val) => &int_val,
+            Token::Assign => "=",
+            Token::Plus => "+",
+            Token::Minus => "-",
+            Token::Bang => "!",
+            Token::Asterisk => "*",
+            Token::Slash => "/",
+            Token::LesserThan => "<",
+            Token::GreaterThan => ">",
+            Token::Equal => "==",
+            Token::NotEqual => "!=",
+            Token::Comma => ",",
+            Token::Semicolon => ",",
+            Token::LParen => "(",
+            Token::RParen => ")",
+            Token::LBrace => "{",
+            Token::RBrace => "}",
+            Token::Function => "function",
+            Token::Let => "let",
+            Token::True => "true",
+            Token::False => "false",
+            Token::If => "if",
+            Token::Else => "else",
+            Token::Return => "return",
+        };
+
+        return val.to_string();
     }
 }

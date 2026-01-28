@@ -4,6 +4,7 @@ use std::any::Any;
 
 pub trait Node: Any {
     fn token_litteral(&self) -> String;
+    fn to_string(&self) -> String;
 }
 
 /// statement nodes (doesn't produce a value)
@@ -26,7 +27,35 @@ impl Node for Program {
             return "".to_string();
         }
     }
+
+    fn to_string(&self) -> String {
+        let mut buf = String::new();
+
+        for statement in &self.statements {
+            buf += &statement.to_string();
+        }
+
+        return buf;
+    }
 }
+
+// ======================================================
+// Expression Statement Node
+pub struct ExpressionStatement {
+    pub token: Token, // the first token of the statement
+    pub expression: Box<dyn Expression>,
+}
+
+impl Node for ExpressionStatement {
+    fn token_litteral(&self) -> String {
+        return self.token.litteral();
+    }
+
+    fn to_string(&self) -> String {
+        return self.expression.to_string();
+    }
+}
+impl Statement for ExpressionStatement {}
 
 // ======================================================
 // Let Statement Node
@@ -38,7 +67,16 @@ pub struct LetStatement {
 
 impl Node for LetStatement {
     fn token_litteral(&self) -> String {
-        return "let".to_string();
+        return self.token.litteral();
+    }
+
+    fn to_string(&self) -> String {
+        return format!(
+            "{} {} = {};",
+            &self.token.litteral(),
+            &self.identifier.to_string(),
+            &self.value.to_string()
+        );
     }
 }
 impl Statement for LetStatement {}
@@ -52,7 +90,15 @@ pub struct ReturnStatement {
 
 impl Node for ReturnStatement {
     fn token_litteral(&self) -> String {
-        return "return".to_string();
+        return self.token.litteral();
+    }
+
+    fn to_string(&self) -> String {
+        return format!(
+            "{} {};",
+            self.token.litteral(),
+            self.return_value.to_string()
+        );
     }
 }
 
@@ -75,5 +121,34 @@ impl Node for Identifier {
             }
         }
     }
+
+    fn to_string(&self) -> String {
+        return self.value.clone();
+    }
 }
 impl Expression for Identifier {}
+
+#[cfg(test)]
+mod tests {
+    use super::{Identifier, LetStatement, Node, Program, Statement, Token};
+
+    #[test]
+    fn test_string() {
+        let mut statements: Vec<Box<dyn Statement>> = Vec::new();
+        statements.push(Box::new(LetStatement {
+            token: Token::Let,
+            identifier: Identifier {
+                token: Token::Ident("my_var".to_string()),
+                value: "my_var".to_string(),
+            },
+            value: Box::new(Identifier {
+                token: Token::Ident("another_var".to_string()),
+                value: "another_var".to_string(),
+            }),
+        }));
+
+        let program = Program { statements };
+
+        assert_eq!(program.to_string(), "let my_var = another_var;")
+    }
+}
